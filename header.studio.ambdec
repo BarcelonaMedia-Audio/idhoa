@@ -1,0 +1,46 @@
+# AmbDec configuration
+# Written by generatingambdecpreset.pl 
+
+/description      
+
+/version          3
+
+/dec/chan_mask    ffff
+/dec/freq_bands   2
+/dec/speakers     23
+/dec/coeff_scale  n3d
+
+/opt/input_scale  n3d
+/opt/nfeff_comp   input
+/opt/delay_comp   off
+/opt/level_comp   off
+/opt/xover_freq    400
+/opt/xover_ratio   0.0
+
+/speakers/{
+add_spkr   1  1.234   27.0415460692   -1.35939557882  system:playback_1
+add_spkr   2  1.234   2.04283140615   -1.39079054354  system:playback_2
+add_spkr   3  1.234   332.958453931   -1.35939557882  system:playback_3
+add_spkr   4  1.234   1.03372198009   25.2255330043   system:playback_4
+add_spkr   5  1.234   90.5036008348   -2.05829450955  system:playback_5
+add_spkr   6  1.234   269.496399165   2.05829450955   system:playback_6
+add_spkr   7  1.234   166.80995235    6.89524790513   system:playback_7
+add_spkr   8  1.234   193.19004765    6.89524790513   system:playback_8
+add_spkr   9  1.234   54.0379157019   -4.49039914903  system:playback_9
+add_spkr  10  1.234   302.679984191   -1.34181305608  system:playback_10
+add_spkr  11  1.234   124.309021931   2.73330540595   system:playback_11
+add_spkr  12  1.234   235.690978069   2.73330540595   system:playback_12
+add_spkr  13  1.234   92.4265791571   27.4212399195   system:playback_13
+add_spkr  14  1.234   267.573420843   27.4212399195   system:playback_14
+add_spkr  15  1.234   35.1695965277   21.065228491    system:playback_15
+add_spkr  16  1.234   324.830403472   21.065228491    system:playback_16
+add_spkr  17  1.234   15.3392440494   -22.9266013259  system:playback_17
+add_spkr  18  1.234   344.660755951   -22.9266013259  system:playback_18
+add_spkr  19  1.234   30.5463301933   30.6450023912   system:playback_19
+add_spkr  20  1.234   329.453669807   30.6450023912   system:playback_20
+add_spkr  21  1.234   143.681356818   27.2300782225   system:playback_21
+add_spkr  22  1.234   216.318643182   27.2300782225   system:playback_22
+add_spkr  23  1.234   301.738222232   88.0711642016   system:playback_23
+/}
+
+
