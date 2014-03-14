@@ -44,11 +44,11 @@ THETA = [-1.35939557882, -1.39079054354, -1.35939557882, 25.2255330043 , -2.0582
 ################
 
 DEC = 'phase' # available: basic, maxRe, phase
-DEG = 3
+DEG = 1
 
 
 # parameters
-SEED = 14        # number of maximum horizontal points in the sampling function (divided by two)
+SEED = 17        # number of maximum horizontal points in the sampling function (divided by two)
                 # from 14 to 20 it's a reasonable number
 
 # FLAGS

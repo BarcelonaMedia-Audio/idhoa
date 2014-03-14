@@ -1,25 +1,25 @@
 #!/usr/bin/python
-'''
- * This file is part of IDHOA software.
- *
- * Copyright (C) 2013 Barcelona Media - www.barcelonamedia.org
- * (Written by Davide Scaini <davide.scaini@barcelonamedia.org> for Barcelona Media)
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>,
- * or write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-'''
+
+# TODO 
+# 1- define the function to be minimized
+#    I guess accordingly to the specifications of the minimization algorithm.
+#    Possible minimization libraries:
+#    - http://code.google.com/p/pyminuit/
+#    - http://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html
+#    - http://ab-initio.mit.edu/wiki/index.php/NLopt_Python_Reference
+#  
+# 2- I will start with some fake function, to understand how to interface to one of this minimization libraries 
+#    2a - I will start with scipy.optimize and some test functions
+#    2b - Implement the calculation of physics variables
+#    2c - Implement function to be minimized              <---
+#    2d - Minimize and debug
+#    2e - Clean
+#
+# 3 - Add features
+#    3a - rejecting area where there are no speakers
+#    3b - implementing weights for optimizations in selected regions
+#    3c - plotting (ATM check vertical plots... not sure)
+#    3d - Clean
 
 
 import os
@@ -36,8 +36,11 @@ import nlopt
 import time
 
 
+#SpeakersPlotting(PHI,THETA,1)
+#SpeakersPlotting(phiTest,thetaTest,1)
 
 start = time.time()
+
 
 
 ## INITIAL PARAMETERS 
@@ -52,6 +55,32 @@ if f0 > fPV and np.asarray([abs(GuessPinv)<1.]).all(): Guess0 = GuessPinv     # 
 
 sij = Sij(Guess0,coeffDir,NPOINTS)
 pressure0, V0, energyD0, J0, Vlongit0, Jlongit0, Vtrans0, Jtrans0 = physDir(sij,phiTest,thetaTest)
+
+####################################
+## Initial PLOTTING
+####################################
+phiPl,thetaPl = PlSpherePtRotat(SEED)
+Npt = len(phiPl)
+phi = np.asarray(phiPl)
+theta = np.asarray(thetaPl)
+
+coeffPl = ambisoniC(phiPl,thetaPl,'basic',DEG,0)
+sij = Sij(Guess0,coeffPl,Npt)
+#sij = Sij(GuessPinv,coeffPl,Npt) # if you want to look at the pinv
+
+pressureZ, VZ, energyDZ, JZ, VlongitZ, JlongitZ, VtransZ, JtransZ = physDir(sij,phiPl,thetaPl)
+
+if DEC!='basic':
+    Polar("Naive-Horizontal",phi[theta==0.],energyDZ[theta==0.],JlongitZ[theta==0.],JtransZ[theta==0.],('energy','intensity L','intensity T'))
+if DEC=='basic':
+    Polar("Naive-Horizontal",phi[theta==0.],pressureZ[theta==0.],VlongitZ[theta==0.],VtransZ[theta==0.],('pressure','velocity L','velocity T'))
+
+
+if DEC!='basic':
+    Polar("Naive-Vertical",theta[phi==0],energyDZ[phi==0],JlongitZ[phi==0],JtransZ[phi==0],('energy','intensity L','intensity T'))
+if DEC=='basic':
+    Polar("Naive-Vertical",theta[phi==0],pressureZ[phi==0],VlongitZ[phi==0],VtransZ[phi==0],('pressure','velocity L','velocity T'))
+
 
 
 
@@ -73,14 +102,14 @@ minstart = time.time()
 while True:
     ## Local Optimization
     # LN_COBYLA, LN_BOBYQA, LN_NEWUOA, LN_NEWUOA_BOUND, LN_PRAXIS, LN_NELDERMEAD, LN_SBPLX
+    if run > 0: initvect = ResCoeff.reshape((1,(DEG+1)**2*NSPK))[0]
     opt = nlopt.opt(nlopt.LN_SBPLX,len(initvect)) 
     opt.set_min_objective(function)
     tol = np.asarray([0.1]*len(initvect))
-    ## You can add some constraints
     #opt.add_equality_mconstraint(eqconstr, tol)    
-    #opt.add_inequality_mconstraint(inconstr, tol)
-    ## Initial step
+    #opt.add_inequality_mconstraint(inconstr, tol)  
     opt.set_initial_step([0.2]*len(initvect))
+    if run > 0: opt.set_initial_step([0.9]*len(initvect))
     #opt.set_initial_step(np.random.rand(len(initvect))); 
 
 
@@ -94,11 +123,19 @@ while True:
         if run>0: 
             if np.asarray(abs(res)<3.*10e-4).reshape(1,((DEG+1)**2*NSPK))[0,i]: upbound[i] = 0.; lowbound[i] = 0.; # putting to zero the speakers that are in a node of a SH
 
+    # number of non-zero elements 
+    print len(np.nonzero(initvect)[0]), " non-zero elements"
+
     opt.set_upper_bounds(upbound)
     opt.set_lower_bounds(lowbound)
 
     opt.set_xtol_abs(10e-6)
     opt.set_ftol_abs(10e-6)
+
+    if run > 0: 
+        opt.set_xtol_abs(10e-8)
+        opt.set_ftol_abs(10e-8)
+
     res = opt.optimize(initvect)
     result = opt.last_optimize_result() #alternative way to get the result
     
@@ -110,7 +147,7 @@ while True:
     #####################
     ## exit condition
     # if (run>0 and (str(prog[run-1])[0:6]==str(prog[run])[0:6] or prog[run]>min(prog)+1)): break # for PRAXIS use this
-    if (run>0 and (prog[run-1]==prog[run] or prog[run]>min(prog)+1) or not MUTESPKRS ): break # for SBPLX use this
+    if (run>0 and ("{:7.4f}".format(prog[run-1])=="{:7.4f}".format(prog[run]) or prog[run]>min(prog)+1) or not MUTESPKRS ): break # for SBPLX use this
     run+=1
 
 
@@ -142,11 +179,6 @@ if ResCoeff.T[abs(ResCoeff.T>1.)].any(): print "WARNING: You reached a bad minim
 ##############################
 ## PLOTTING
 ##############################
-phiPl,thetaPl = PlSpherePtRotat(SEED)
-Npt = len(phiPl)
-phi = np.asarray(phiPl)
-theta = np.asarray(thetaPl)
-
 ## results plots
 coeffPl = ambisoniC(phiPl,thetaPl,'basic',DEG,0)
 sij = Sij(ResCoeff,coeffPl,Npt)
@@ -162,14 +194,20 @@ if DEC!='basic':
 if DEC=='basic':
     Polar("Vertical",theta[phi==0],pressure[phi==0],Vlongit[phi==0],Vtrans[phi==0],('pressure','velocity L','velocity T'))
 
-
-### You can make a 3D plot of the variable you are interested in ;)
-#SpeakersPlotting(phi,theta,Jlongit)
+SpeakersPlotting(phi,theta,Jlongit)
 
 
-## output some files (change name accordingly to your needs)
-np.savetxt("3rd-phase.amb",ResCoeff.T,fmt="%f",delimiter="  ")
-np.savetxt("3rd-phase-G0.amb",Guess0.T,fmt="%f",delimiter="  ")
+
+# output some files
+fuma = np.asarray([ResCoeff[0]*np.sqrt(2), ResCoeff[1]*np.sqrt(3), ResCoeff[2]*np.sqrt(3), ResCoeff[3]*np.sqrt(3)])
+Gfuma = np.asarray([Guess0[0]*np.sqrt(2), Guess0[1]*np.sqrt(3), Guess0[2]*np.sqrt(3), Guess0[3]*np.sqrt(3)])
+np.savetxt("Guess0-Fuma.idhoa",np.asarray(Gfuma).T,fmt="%f",delimiter="  ")
+np.savetxt("Fuma-1st.idhoa",np.asarray(fuma).T,fmt="%f",delimiter="  ")
+
+filename = str(DEG)+"-"+str(DEC)+"-rem"+str(AUTOREM)
+np.savetxt(filename+".idhoa",ResCoeff.T,fmt="%f",delimiter="  ")
+np.savetxt(filename+"-Gpinv.idhoa",GuessPinv.T,fmt="%f",delimiter="  ")
+np.savetxt(filename+"-G0.idhoa",Guess0.T,fmt="%f",delimiter="  ")
 ##
 ###############################
 
