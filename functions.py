@@ -521,7 +521,7 @@ def Wplane():
 def Wbinary():
     from constants import thetaTest,thetaThreshold
     import numpy as np
-    return  thetaTest > thetaThreshold
+    return  np.asarray(thetaTest) > thetaThreshold
 
 
 def angDist(phi1,e1,phi2,e2):
