@@ -1,54 +1,55 @@
 #!/usr/bin/python
 
-# TODO 
-# 1- define the function to be minimized
-#    I guess accordingly to the specifications of the minimization algorithm.
-#    Possible minimization libraries:
-#    - http://code.google.com/p/pyminuit/
-#    - http://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html
-#    - http://ab-initio.mit.edu/wiki/index.php/NLopt_Python_Reference
-#  
-# 2- I will start with some fake function, to understand how to interface to one of this minimization libraries 
-#    2a - I will start with scipy.optimize and some test functions
-#    2b - Implement the calculation of physics variables
-#    2c - Implement function to be minimized              <---
-#    2d - Minimize and debug
-#    2e - Clean
-#
-# 3 - Add features
-#    3a - rejecting area where there are no speakers
-#    3b - implementing weights for optimizations in selected regions
-#    3c - plotting (ATM check vertical plots... not sure)
-#    3d - Clean
+'''
+* This file is part of IDHOA software.
+*
+* Copyright (C) 2013 Barcelona Media - www.barcelonamedia.org
+* (Written by Davide Scaini <davide.scaini@barcelonamedia.org> for Barcelona Media)
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>,
+* or write to the Free Software Foundation, Inc.,
+* 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+'''
 
 
-import os
-os.system("export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/") # This doesn't work but it's more a reminder
 
 import numpy as np
-from numpy.linalg import norm 
 import math as mh
-from functions import *
-from constants import *
-from plotting import *
 import sys
 import nlopt
 import time
+from constants import *
+from functions import *
+from plotting import *
 
 
+#controls(NSPK,DEG) ## checks before running the main program
 #SpeakersPlotting(PHI,THETA,1)
 #SpeakersPlotting(phiTest,thetaTest,1)
+#SpeakersPlotting(phiTest*WremVec,thetaTest*WremVec,1)
 
 start = time.time()
 
 
-
 ## INITIAL PARAMETERS 
+coeffDir = ambisoniC(phiTest,thetaTest,'basic',DEG,0) # calculating ambisonics coefficients in test directions
 Guess0 = ambisoniC(PHI,THETA,DEC,DEG,0)     # initial guess
 GuessPinv = ambisoniC(PHI,THETA,DEC,DEG,1)     # initial guess
 
-f0 = function(Guess0,np.asarray([]))
-fPV = function(GuessPinv,np.asarray([]))
+
+f0 = function(Guess0,coeffDir)
+fPV = function(GuessPinv,coeffDir)
 
 if f0 > fPV and np.asarray([abs(GuessPinv)<1.]).all(): Guess0 = GuessPinv     # This way we choose the starting point closest to the minimum
 
@@ -140,9 +141,10 @@ while True:
     result = opt.last_optimize_result() #alternative way to get the result
     
     ResCoeff = np.reshape(res, ((DEG+1)**2,NSPK))
-    print "Function value for Naive: ", function(Guess0,np.asarray([])), " for Pinv: ", function(GuessPinv,np.asarray([])), " for NL-min: ",function(ResCoeff,np.asarray([])), " Elapsed time: ", time.time()-minstart
+    #print "Function value for Naive: ", function(Guess0,coeffDir), " for Pinv: ", function(GuessPinv,coeffDir), " for NL-min: ",function(ResCoeff,coeffDir), " Elapsed time: ", time.time()-minstart
+    print "Function value for Naive: ", function(Guess0,coeffDir), " for Pinv: ", function(GuessPinv,coeffDir), " for NL-min: ",function(ResCoeff,coeffDir), " Elapsed time: ", time.time()-minstart
     minstart = time.time()
-    prog.append(function(ResCoeff,np.asarray([])))
+    prog.append(function(ResCoeff,coeffDir))
     
     #####################
     ## exit condition
@@ -212,6 +214,6 @@ np.savetxt(filename+"-G0.idhoa",Guess0.T,fmt="%f",delimiter="  ")
 ###############################
 
 print "Elapsed time ", time.time()-start
-print "Function value for Naive: ", function(Guess0,np.asarray([])), " for Pinv: ", function(GuessPinv,np.asarray([])), " for NL-min: ",function(ResCoeff,np.asarray([]))
+print "Function value for Naive: ", function(Guess0,coeffDir), " for Pinv: ", function(GuessPinv,coeffDir), " for NL-min: ",function(ResCoeff,coeffDir)
 
 wait = raw_input()
