@@ -1,45 +1,51 @@
 #!/usr/bin/python
 
+'''
+* This file is part of IDHOA software.
+*
+* Copyright (C) 2013 Barcelona Media - www.barcelonamedia.org
+* (Written by Davide Scaini <davide.scaini@barcelonamedia.org> for Barcelona Media)
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>,
+* or write to the Free Software Foundation, Inc.,
+* 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+'''
+
+
+
+import sys
+import numpy as np
+from scipy import special, linalg
+import math as mh
+from constants import *
+
+
 ## checks
 def controls(NSPK,DEG):
-    import sys
     if NSPK < (DEG+1)**2:
         sys.exit("\n##!!!!!!!!!!!!!!!!!!!!!!!!!!##\nYou don't have enough speakers for this decoding order.")
-
-
-## defining points over the sphere
-def SpherePt(NP):
-    import sys
-    import numpy as np
-
-    thetaPrev = [(np.pi/2.0-(float(i)/NP)*np.pi) for i in range(NP)]
-    theta = []
-    phi = []
-    
-    for i in range(len(thetaPrev)):
-        n = max(int(2*NP*np.cos(thetaPrev[i])),1)
-        phi.append( [(float(jj)/n*2)*np.pi for jj in range(n)] )
-        temp = [thetaPrev[i]] *(n)
-        theta.append(temp)
-
-    phiok = [item for sublist in phi for item in sublist]
-    thetaok = [item for sublist in theta for item in sublist]
-
-    if len(phiok)!=len(thetaok): sys.exit("Died generating points on the sphere")
-    return np.asarray(phiok), np.asarray(thetaok)
 
 
 
 
 def gauss_legendre(n):
-    import scipy as sp
-    import scipy.linalg
     # http://www.scientificpython.net/1/post/2012/04/gausslegendre1.html
-    k=sp.arange(1.0,n)       
-    a_band = sp.zeros((2,n)) 
-    a_band[1,0:n-1] = k/sp.sqrt(4*k*k-1) 
-    x,V=sp.linalg.eig_banded(a_band,lower=True) 
-    w=2*sp.real(sp.power(V[0,:],2)) 
+    k=np.arange(1.0,n)       
+    a_band = np.zeros((2,n)) 
+    a_band[1,0:n-1] = k/np.sqrt(4*k*k-1) 
+    x,V = linalg.eig_banded(a_band,lower=True) 
+    w=2*np.real(np.power(V[0,:],2)) 
     return x, w
 
 def maxReG1(order):
@@ -47,17 +53,13 @@ def maxReG1(order):
     return max(x)
 
 def maxReCoeffs(order):
-    from scipy.special import legendre
-    coeffs = [legendre(i)(maxReG1(order)) for i in range(order+1)]
+    coeffs = [special.legendre(i)(maxReG1(order)) for i in range(order+1)]
     return coeffs
 
 
-def ambisoniC(phi,theta,DEC,DEG,inversion):
-    import numpy as np
-    import math as mh
-    import sys
 
-   
+
+def ambisoniC(phi,theta,DEC,DEG,inversion):
     NUM = len(phi)         # number of speakers
   
     #things to be initializated
@@ -242,10 +244,6 @@ def ambisoniC(phi,theta,DEC,DEG,inversion):
 ##########################
 
 def Sij(coeffSpk, coeffDir,NSphPt):
-    import numpy as np
-    import sys
-    from constants import NSPK
-
     sij = np.dot(coeffSpk.T, coeffDir*NSphPt) # this will have the dimensions of NSPK*NPOINTS
     if sij.shape != (NSPK,NSphPt): sys.exit("Wrong dimensions in Sij\n")
     return sij
@@ -253,7 +251,6 @@ def Sij(coeffSpk, coeffDir,NSphPt):
 
 
 def physOmni(Sij):
-   
     # LOW FREQUENCIES
     # pressure
     pressure = sum(Sij)
@@ -272,8 +269,6 @@ def physOmni(Sij):
 
 
 def velocity(Sij):
-    import numpy as np
-    from constants import PHI,THETA
     phi = np.asarray(PHI)
     theta = np.asarray(THETA)
     Sx = np.cos(phi) * np.cos(theta)
@@ -307,7 +302,6 @@ def Longit(A,B):
 
 
 def Transv(A,B):    # aka Cross
-    import numpy as np
     Sum = 0
     if len(A)!=len(B): sys.exit("I'm dying in Transv function. Arrays with different shapes.")
     for i in range(len(A)):
@@ -317,7 +311,6 @@ def Transv(A,B):    # aka Cross
 
 
 def physDir(Sij,phi,theta):
-    import numpy as np
     phi = np.asarray(phi)
     theta = np.asarray(theta)
     Zx = np.cos(phi) * np.cos(theta)
@@ -341,8 +334,6 @@ def physDir(Sij,phi,theta):
 
 
 def oppGain(Sij):
-    import numpy as np
-    from constants import NSPK,NPOINTS
     # FOR IN-PHASE DECODING
     oppGain = np.zeros((NSPK,NPOINTS),dtype=np.float64)
     oppGain[Sij<0] = Sij[Sij<0]
@@ -355,7 +346,6 @@ def oppGain(Sij):
 
 
 def sph2cart(phi,theta):
-    import numpy as np
     """Acoustics convention!"""
     x = np.cos(phi) * np.cos(theta)
     y = np.sin(phi) * np.cos(theta)
@@ -363,7 +353,6 @@ def sph2cart(phi,theta):
     return x, y, z
 
 def Physph2cart(phi,theta):
-    import numpy as np
     """Physics convention!"""
     x = np.cos(phi) * np.sin(theta)
     y = np.sin(phi) * np.sin(theta)
@@ -371,7 +360,6 @@ def Physph2cart(phi,theta):
     return x, y, z
 
 def PlotOverSphere(phi,theta,rho):
-    import numpy as np
     """Acoustics convention!"""
     x = np.cos(phi) * np.cos(theta)*rho
     y = np.sin(phi) * np.cos(theta)*rho
@@ -380,26 +368,26 @@ def PlotOverSphere(phi,theta,rho):
 
 
 def eval_grad(f, theta):
-    import algopy
     theta = algopy.UTPM.init_jacobian(theta)
     return algopy.UTPM.extract_jacobian(f(theta))
 
 def eval_hess(f, theta):
-    import algopy
     theta = algopy.UTPM.init_hessian(theta)
     return algopy.UTPM.extract_hessian(len(theta), f(theta))
 
 
+
+coeffDir = ambisoniC(phiTest,thetaTest,'basic',DEG,0) # calculating ambisonics coefficients in test directions
+## this is horrible but it's the only way to make the NLopt work... # FIXME
+
 ################################
 # The function to be minimized #
 ################################
-def function(VarCoeffSpk,grad):
-    import numpy as np
-    from constants import NSPK,DEG,DEC,PREFHOM,coeffDir,NPOINTS,phiTest,thetaTest,WFRONT,WPLANE,WBIN,WAUTOREM,WfrontVec,WplaneVec,WbinVec,WremVec
-    from numpy.linalg import norm
-    
-    if grad.size>0:
+def function(VarCoeffSpk,*args):
+    if len(args)>1 :
+        grad = args[0]
         print "You have to implement the gradient or use another algorithm"
+
 
     """The function to be minimized"""
     CP = 400. # arbitrary coefficients
@@ -434,7 +422,7 @@ def function(VarCoeffSpk,grad):
         if PREFHOM:
             Tvar = np.var(VarCoeffSpk[0])/(np.mean(VarCoeffSpk[0]))**2
         
-        target = np.sum(CP*Tpressure + CL*TVlon + CT* TVtrans) + CV*Tvar 
+        target = np.sum(CP*Tpressure +  CL*TVlon + CT* TVtrans) + CV*Tvar 
         # one sum instead of three (in Tpressure, TVlon,...)
         # anyway norm is (much) faster...
 
@@ -446,11 +434,11 @@ def function(VarCoeffSpk,grad):
         if PREFHOM:
             Tvar = np.var(VarCoeffSpk[0])/(np.mean(VarCoeffSpk[0]))**2
         
-        target = np.sum(CE*TenergyD + CL*TJlon + CT*TJtrans) + CV*Tvar
+        target = np.sum(CE*TenergyD +  CL*TJlon + CT*TJtrans) + CV*Tvar
         
-        #TenergyD = norm((1.-energyD)*Wj)**2/NPOINTS
-        #TJlon = norm((1.-Jlongit)*Wj*Mj)**2/NPOINTS
-        #TJtrans = norm((Jtrans)*Wj*Mj)**2/NPOINTS
+        #TenergyD = np.linalg.norm((1.-energyD)*Wj)**2/NPOINTS
+        #TJlon = np.linalg.norm((1.-Jlongit)*Wj*Mj)**2/NPOINTS
+        #TJtrans = np.linalg.norm((Jtrans)*Wj*Mj)**2/NPOINTS
         #Tvar = 0
         #if PREFHOM:
         #    Tvar = np.var(VarCoeffSpk[0])/(np.mean(VarCoeffSpk[0]))**2
@@ -459,13 +447,13 @@ def function(VarCoeffSpk,grad):
 
 
     elif DEC=='phase':
-        TenergyD = ((1.-energyD)**2*Wj)/NPOINTS
+        TenergyD = ((1.-energyD)**2* Wj)/NPOINTS
         TJlon = ((1.-Jlongit)**2*Wj*Mj)/NPOINTS
         TJtrans = ((Jtrans)**2*Wj*Mj)/NPOINTS
         Tvar = 0
         if PREFHOM:
             Tvar = np.var(VarCoeffSpk[0])/(np.mean(VarCoeffSpk[0]))**2
-        ToppGain = norm(oppGain(sij))**2/NPOINTS
+        ToppGain = np.linalg.norm(oppGain(sij))**2/NPOINTS
 
         target = np.sum(CE*TenergyD + CL*TJlon + CT*TJtrans) + CPH*ToppGain * CV*Tvar  # missing some extra factors (see dani's paper page 5)
 
@@ -475,7 +463,6 @@ def function(VarCoeffSpk,grad):
 ## with nlopt you can also write linear and non linear constraints... have a look at the reference
 ## http://ab-initio.mit.edu/wiki/index.php/NLopt_Python_Reference
 def eqconstr(result,x,grad):
-	from constants import NSPK,PHI,THETA
 	if grad.size > 0:
 		print "gradient to be implemented"
 		
@@ -488,7 +475,6 @@ def eqconstr(result,x,grad):
 
 
 def inconstr(result,x,grad):
-	from constants import NSPK,PHI,THETA
 	if grad.size > 0:
 		print "gradient to be implemented"
 		
@@ -501,79 +487,4 @@ def inconstr(result,x,grad):
 	return
 
 
-
-#############
-## weights ##
-#############
-
-def Wfront():
-    from constants import phiTest,thetaTest
-    import numpy as np
-    wvect = 1. + np.cos(phiTest) * np.cos(thetaTest)/2.
-    return wvect
-
-def Wplane():
-    from constants import thetaTest
-    import numpy as np
-    wvect = 1. + np.cos(thetaTest)**2.
-    return wvect
-
-def Wbinary():
-    from constants import thetaTest,thetaThreshold
-    import numpy as np
-    return  np.asarray(thetaTest) > thetaThreshold
-
-
-def angDist(phi1,e1,phi2,e2):
-    import numpy as np
-    # Implement haversine formula (see Wikipedia)
-    dist = 2.0*np.arcsin(np.sqrt( (np.sin((e1 - e2)/2.0))**2 + np.cos(e1)*np.cos(e2)*(np.sin((phi1 - phi2)/2.0))**2 ) )
-    return dist
-
-def spkDist():
-    from constants import PHI,THETA
-    import numpy as np
-    
-    dvec = np.array([])
-    mins = np.array([])
-    for i in range(len(PHI)):
-        for j in range(len(PHI)): # you could do probably something like: for j in range(i+1,len(PHI))
-            dvec= np.append(dvec,[angDist(PHI[i],THETA[i],PHI[j],THETA[j])])
-
-        mins = np.append(mins,[min(dvec[dvec!=0])])
-        dvec = np.array([]) # reset dvec
-    mean = np.mean(mins) # calculates the mean only of the smalles values - the closest speakers
-    return mean
-
-def autoremoval():
-    from constants import phiTest,thetaTest,PHI,THETA
-
-    meanSpkDist = spkDist()
-    phit = []
-    thetat = []
-    for i in range(len(phiTest)):
-        for j in range(len(PHI)):
-            if angDist(phiTest[i],thetaTest[i],PHI[j],THETA[j]) < meanSpkDist*1.5:
-                phit.append(phiTest[i])
-                thetat.append(thetaTest[i])
-                break
-    return phit, thetat
-
-
-def Wautoremoval():
-    from constants import phiTest,thetaTest,PHI,THETA
-    import numpy as np
-
-    meanSpkDist = spkDist()
-    
-    wvect = []
-    for i in range(len(phiTest)):
-        for j in range(len(PHI)):
-            if angDist(phiTest[i],thetaTest[i],PHI[j],THETA[j]) < meanSpkDist*1.5:
-                temp = True
-                break
-            else: temp = False
-        wvect.append(temp)
-
-    return np.asarray(wvect)
 
